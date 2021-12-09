@@ -1,0 +1,25 @@
+config:
+  target: "http://kt.thangovn.com:5000"
+  socketio:
+    transports: ["websocket"]
+  phases:
+    - duration: 300
+      arrivalRate: 50
+scenarios:
+  - engine: "socketio"
+    flow:
+      - emit:
+          channel: "join_room"
+          data: {
+            "user_name": "NXS {{ $randomString() }}", 
+            "user_id": "{{ $randomString() }}", 
+            "chanel_id": "bacarat-19"
+          }
+      - emit:
+          channel: "send_message"
+          data: {
+            "user_name": "NXS {{ $randomString() }}",
+            "user_id": "{{ $randomString() }}", 
+            "chanel_id": "bacarat-19",
+            "message": "{{ $randomString() }}"
+          }
