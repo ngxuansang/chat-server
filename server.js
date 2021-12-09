@@ -38,7 +38,6 @@ mongoose.connect(process.env.MONGO_DB_URL, { useNewUrlParser: true, useUnifiedTo
       console.log('Client connected', socket.id)
 
       socket.on('send_gift', async payload => {
-        const { user_name, user_id, chanel_id, gift_data, quantity } = payload
         await giftQueue.add(payload)
       })
 
