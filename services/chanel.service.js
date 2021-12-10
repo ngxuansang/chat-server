@@ -25,10 +25,10 @@ const getMessagesByChanel = async (chanel_id, from, to) => {
             cond: {
               "$and": [
                 {
-                  "$gte": ["$$message.updatedAt", from.toDate()]
+                  "$gte": ["$$message.updated_at", from.toDate()]
                 },
                 {
-                  "$lte": ["$$message.updatedAt", to.toDate()]
+                  "$lte": ["$$message.updated_at", to.toDate()]
                 }
               ]
             }
