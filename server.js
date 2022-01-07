@@ -13,15 +13,11 @@ const PORT = process.env.PORT || 5000;
 const INDEX = '/index.html';
 
 const chanelService = require('./services/chanel.service')
-const chanelRoute = require('./routes/chanel.route')
-const giftRoute = require('./routes/gift.route')
 const giftQueue = require("./queues/gift.queue")
 
 const server = express()
   .use(cors())
   .use(logger('dev'))
-  .use('/chanel', chanelRoute)
-  .use('/gift', giftRoute)
   .use((req, res) => res.sendFile(INDEX, { root: __dirname }))
   .listen(PORT, () => console.log(`Listening on ${PORT}`))
 
@@ -51,8 +47,8 @@ mongoose.connect(process.env.MONGO_DB_URL, { useNewUrlParser: true, useUnifiedTo
 
         chanel = await chanelService.getMessagesByChanel(chanel_id)
         await socket.join(chanel_id)
-        io.to(chanel_id).emit('subscribe.chanel_concurrent', { concurrent: clients.length, chanel_id })
-        io.to(socket.id).emit('subscribe.chanel_messages', chanel)
+        io.to(chanel_id).emit('subscribe.channel_concurrent', { concurrent: clients.length, chanel_id })
+        io.to(socket.id).emit('subscribe.channel_messages', chanel)
         io.to(chanel_id).emit('subscribe.new_message', {
           chanel_id,
           user_name,
@@ -62,16 +58,18 @@ mongoose.connect(process.env.MONGO_DB_URL, { useNewUrlParser: true, useUnifiedTo
         })
       })
 
-      socket.on('send_message', async ({ user_name, user_id, message, chanel_id }) => {
+      socket.on('send_message', async ({ user_name, user_id, message, chanel_id, user_level }) => {
         const message_data = {
           chanel_id,
           user_name,
           user_id,
           message,
-          is_system: false
+          is_system: false,
+          user_level
         }
 
         io.in(chanel_id).emit("subscribe.new_message", message_data)
+        io.in(chanel_id).emit("sub.chat", message_data)
         await live_streaming_chanels.updateOne({ chanel_id }, {
           "$push": {
             messages: message_data
@@ -88,16 +86,19 @@ mongoose.connect(process.env.MONGO_DB_URL, { useNewUrlParser: true, useUnifiedTo
           chanel_id,
           user_name,
           user_id,
-          message: `${user_name} leaved`,
+          message: `${user_name} has left the live`,
           is_system: true
         })
-        io.to(chanel_id).emit('subscribe.chanel_concurrent', { concurrent: clients.length, chanel_id })
+        io.to(chanel_id).emit('subscribe.channel_concurrent', { concurrent: clients.length, chanel_id })
       })
 
       socket.on('disconnecting', async reason => {
         for (const chanel_id of socket.rooms) {
           const clients = await io.in(chanel_id).fetchSockets()
-          io.to(chanel_id).emit('subscribe.chanel_concurrent', { concurrent: clients.length, chanel_id })
+          io.to(chanel_id).emit('subscribe.chanel_concurrent', {
+            concurrent: clients.length,
+            chanel_id
+          })
         }
       })
     })
@@ -109,6 +110,7 @@ mongoose.connect(process.env.MONGO_DB_URL, { useNewUrlParser: true, useUnifiedTo
     giftQueue.on("completed", (job, result) => {
       console.log(`Job with id ${job.id} has been completed.`, { result });
       io.to(result.chanel_id).emit('subscribe.receive_gift', result)
+      io.to(result.chanel_id).emit('sub.gift', result)
     })
   })
   .catch(err => console.error("connection error: ", { err }))
