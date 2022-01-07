@@ -58,18 +58,21 @@ mongoose.connect(process.env.MONGO_DB_URL, { useNewUrlParser: true, useUnifiedTo
         })
       })
 
-      socket.on('send_message', async ({ user_name, user_id, message, chanel_id, user_level }) => {
+      socket.on('send_message', async (payload) => {
+        payload.date = new Date()
+        const { user_name, user_id, message, chanel_id, user_level, live_streaming_id } = payload
         const message_data = {
           chanel_id,
           user_name,
           user_id,
           message,
           is_system: false,
-          user_level
+          user_level,
+          live_streaming_id
         }
 
-        io.in(chanel_id).emit("subscribe.new_message", message_data)
-        io.in(chanel_id).emit("sub.chat", message_data)
+        io.in(chanel_id).emit("subscribe.new_message", payload)
+        io.in(chanel_id).emit("sub.chat", payload)
         await live_streaming_chanels.updateOne({ chanel_id }, {
           "$push": {
             messages: message_data
